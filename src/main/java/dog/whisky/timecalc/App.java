@@ -37,7 +37,7 @@ class TimeCalculator extends JFrame {
 	private static final long serialVersionUID = 1L;
 	private static final String[] timeNames = { "year", "month", "day", "hour", "minute", "second" };
 	
-	private Integer[] timeValues = { 0, 0, 0, 0, 0, 0 };
+	private Long[] timeValues = { 0L, 0L, 0L, 0L, 0L, 0L };
 	private CalendarPanel fCalendarPanel;
 	private CalendarPanel sCalendarPanel;
 
@@ -54,8 +54,8 @@ class TimeCalculator extends JFrame {
 		} catch (IOException exception) { System.out.println(exception); }
 		setIconImages(imageList);
 		setTitle("Time Calculator");
-		fCalendarPanel = new CalendarPanel();
-		sCalendarPanel = new CalendarPanel();
+		fCalendarPanel = new CalendarPanel(1492);
+		sCalendarPanel = new CalendarPanel(1492);
 
 		add(new CenterLabel("Date 1"));
 		add(fCalendarPanel);
@@ -90,12 +90,17 @@ class TimeCalculator extends JFrame {
 	void calculatePeriod() {
 		LocalDateTime fDate = fCalendarPanel.getLocalDateTime();
 		LocalDateTime sDate = sCalendarPanel.getLocalDateTime();
-		timeValues[0] = Math.abs(Period.between(fDate.toLocalDate(), sDate.toLocalDate()).getYears());
-		timeValues[1] = Math.abs(Period.between(fDate.toLocalDate(), sDate.toLocalDate()).getMonths());
-		timeValues[2] = Math.abs(Period.between(fDate.toLocalDate(), sDate.toLocalDate()).getDays());
-		timeValues[3] = Math.abs((int)fDate.until(sDate, ChronoUnit.HOURS)) % 24;
-		timeValues[4] = Math.abs((int)fDate.until(sDate, ChronoUnit.MINUTES)) % 60;
-		timeValues[5] = Math.abs((int)fDate.until(sDate, ChronoUnit.SECONDS)) % 60;
+		Period period = Period.between(fDate.toLocalDate(), sDate.toLocalDate());
+		timeValues[0] = (long)Math.abs(period.getYears());
+		timeValues[1] = (long)Math.abs(period.getMonths());
+		timeValues[2] = (long)Math.abs(period.getDays());
+		long hours = Math.abs(fDate.until(sDate, ChronoUnit.HOURS));
+		if (timeValues[2] > 0 && hours / timeValues[2] < 24) {
+			timeValues[2]--;
+		}
+		timeValues[3] = hours % 24;
+		timeValues[4] = Math.abs(fDate.until(sDate, ChronoUnit.MINUTES)) % 60;
+		timeValues[5] = Math.abs(fDate.until(sDate, ChronoUnit.SECONDS)) % 60;
 	}
 
 	String getResultText() {
@@ -122,33 +127,38 @@ class TimeCalculator extends JFrame {
 class CalendarPanel extends JPanel {
 	static final long serialVersionUID = 1L;
 
+	private static final String[] monthNames = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
 	private GregorianCalendar calendar;
-	private JComboBox<Integer> dateBox;
-	private JComboBox<Integer> monthBox;
-	private JComboBox<Integer> yearBox;
+	private JComboBox<String> dateBox;
+	private JComboBox<String> monthBox;
+	private JComboBox<String> yearBox;
 
 	private JComboBox<String> hourBox;
 	private JComboBox<String> minBox;
 	private JComboBox<String> scndBox;
 
-	CalendarPanel() {
+	private int epoch;
+
+	CalendarPanel(int epoch) {
+		this.epoch = epoch;
 		calendar = new GregorianCalendar();
-		dateBox = new JComboBox<Integer>();
-		monthBox = new JComboBox<Integer>();
-		yearBox = new JComboBox<Integer>();
+		dateBox = new JComboBox<String>();
+		monthBox = new JComboBox<String>();
+		yearBox = new JComboBox<String>();
 
 		hourBox = new JComboBox<String>();
 		minBox = new JComboBox<String>();
 		scndBox = new JComboBox<String>();
 
 		for (int i = 1; i <= calendar.getActualMaximum(Calendar.DAY_OF_MONTH); i++) {
-			dateBox.addItem(i);
+			dateBox.addItem(String.format("%02d", i));
 		}
 		for (int i = 0; i <= calendar.getActualMaximum(Calendar.MONTH); i++) {
-			monthBox.addItem(i+1);
+			monthBox.addItem(String.format("%02d - %s", i+1, monthNames[i]));
 		}
-		for (int i = 1492; i <= calendar.get(Calendar.YEAR); i++) {
-			yearBox.addItem(i);
+		for (int i = epoch; i <= calendar.get(Calendar.YEAR)+1000; i++) {
+			yearBox.addItem(String.format("%04d", i));
 		}
 		for (int i = 0; i <= calendar.getMaximum(Calendar.HOUR_OF_DAY); i++) {
 			hourBox.addItem(String.format("%02d", i));
@@ -166,7 +176,7 @@ class CalendarPanel extends JPanel {
 			@Override
 			public void itemStateChanged(ItemEvent e) {
 				if (e.getStateChange() == ItemEvent.SELECTED) {
-					calendar.set(Calendar.DATE, (int)e.getItem());
+					calendar.set(Calendar.DATE, dateBox.getSelectedIndex()+1);
 				}
 			}
 		});
@@ -183,7 +193,7 @@ class CalendarPanel extends JPanel {
 			@Override
 			public void itemStateChanged(ItemEvent e) {
 				if (e.getStateChange() == ItemEvent.SELECTED) {
-					calendar.set(Calendar.YEAR, (int)e.getItem());
+					calendar.set(Calendar.YEAR, yearBox.getSelectedIndex()+epoch);
 					checkMaximumDate();
 				}
 			}
@@ -245,16 +255,16 @@ class CalendarPanel extends JPanel {
 			}
 		} else if (dateBox.getItemCount() < calendar.getActualMaximum(Calendar.DATE)) {
 			for (int i = dateBox.getItemCount()+1; i <= calendar.getActualMaximum(Calendar.DATE); i++) {
-				dateBox.addItem(i);
+				dateBox.addItem(String.format("%02d", i));
 			}
 		}
-		calendar.set(Calendar.DATE, (int)dateBox.getSelectedItem());
+		calendar.set(Calendar.DATE, dateBox.getSelectedIndex()+1);
 	}
 
 	private void setBoxesToCalendar() {
-		dateBox.setSelectedItem(calendar.get(Calendar.DATE));
+		dateBox.setSelectedIndex(calendar.get(Calendar.DATE)-1);
 		monthBox.setSelectedIndex(calendar.get(Calendar.MONTH));
-		yearBox.setSelectedItem(calendar.get(Calendar.YEAR));
+		yearBox.setSelectedIndex(calendar.get(Calendar.YEAR)-epoch);
 		hourBox.setSelectedIndex(calendar.get(Calendar.HOUR_OF_DAY));
 		minBox.setSelectedIndex(calendar.get(Calendar.MINUTE));
 		scndBox.setSelectedIndex(calendar.get(Calendar.SECOND));
