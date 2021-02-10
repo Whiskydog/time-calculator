@@ -30,13 +30,13 @@ dependencies {
 
 application {
     // Define the main class for the application.
-    mainClassName = 'dog.whisky.timecalc.App'
+    mainClassName = 'whiskydog.timecalc.App'
 }
 
 jar {
     manifest {
         attributes (
-            'Main-Class': 'dog.whisky.timecalc.App'
+            'Main-Class': 'whiskydog.timecalc.App'
         )
     }
 }
